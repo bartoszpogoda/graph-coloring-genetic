@@ -1,0 +1,13 @@
+c My very simple one
+p edge 10 11
+e 1 2
+e 1 7
+e 2 5
+e 3 4
+e 3 6
+e 4 10
+e 5 6
+e 5 8
+e 6 10
+e 8 9
+e 9 10
