@@ -1,4 +1,4 @@
-#Graph coloring - genetic
+# Graph coloring - genetic
 
 Solving graph coloring problem for academic course "Methods of computational intelligence".
 
