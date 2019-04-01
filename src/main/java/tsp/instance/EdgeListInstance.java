@@ -20,6 +20,7 @@ public class EdgeListInstance extends AbstractInstance {
 	@Override
 	public void setConnected(int vertexA, int vertexB, boolean connected) {
 		edges.get(Math.min(vertexA, vertexB)).add(Math.max(vertexA, vertexB));
+		edges.get(Math.max(vertexA, vertexB)).add(Math.min(vertexA, vertexB));
 	}
 
 	@Override
@@ -35,6 +36,11 @@ public class EdgeListInstance extends AbstractInstance {
 					edges.get(i).stream().map(otherEdge -> new Edge(j, otherEdge)).collect(Collectors.toList()));
 		}
 		return allEdges;
+	}
+
+	@Override
+	public List<Edge> getAdjacentEdges(int vertex) {
+		return edges.get(vertex).stream().map(i -> new Edge(vertex, i)).collect(Collectors.toList());
 	}
 
 }

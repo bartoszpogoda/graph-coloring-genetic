@@ -1,12 +1,14 @@
 package tsp.algorithm.util;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import tsp.algorithm.individual.Chromosome;
 import tsp.algorithm.individual.PhenotypeInterpreter;
 import tsp.algorithm.population.Population;
 import tsp.instance.AbstractInstance;
+import tsp.instance.Edge;
 
 public class FitnessCalculator {
 	private AbstractInstance instance;
@@ -73,18 +75,16 @@ public class FitnessCalculator {
 	// TODO maybe store graph as list of edges for performance of this method?
 	// TODO maybe reimplement to use edge list instance better
 	public int countInvalidEdges(Chromosome chromosome) {
-		int count = 0;
-		int size = instance.getSize();
+		int count = 0;	
+		List<Edge> edges = instance.getAllEdges();
+	
+		for (Edge edge : edges) {
+			if (phenotypeInterpreter.getColor(chromosome, edge.getFrom()) == phenotypeInterpreter.getColor(chromosome,
+					edge.getTo())) {
 
-		for (int i = 0; i < size - 1; i++) {
-			for (int j = i + 1; j < size; j++) {
-				if (instance.areConnected(i, j) && phenotypeInterpreter.getColor(chromosome, i) == phenotypeInterpreter
-						.getColor(chromosome, j)) {
-					count++;
-				}
+				count++;
 			}
 		}
-
 		return count;
 	}
 }

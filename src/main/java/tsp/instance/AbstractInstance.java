@@ -36,5 +36,7 @@ public abstract class AbstractInstance {
 
 	public abstract List<Edge> getAllEdges();
 	
+	public abstract List<Edge> getAdjacentEdges(int vertex);
+	
 	// TODO implement toString
 }

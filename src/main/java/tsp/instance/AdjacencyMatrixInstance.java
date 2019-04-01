@@ -51,5 +51,16 @@ public class AdjacencyMatrixInstance extends AbstractInstance {
 			return stringBuilder.toString();
 		}
 
-	
+		@Override
+		public List<Edge> getAdjacentEdges(int vertex) {
+			List<Edge> edges = new ArrayList<>();
+			
+			for(int i = 0 ; i < size ; i++) {
+				if(i != vertex && adjacencyMatrix[Math.min(vertex, i)][Math.max(vertex, i)] == 1) {
+					edges.add(new Edge(vertex, i));
+				}
+			}
+			
+			return edges;
+		}	
 }

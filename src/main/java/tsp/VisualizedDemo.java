@@ -15,6 +15,8 @@ import tsp.algorithm.crossover.SinglePointCrossoverOperator;
 import tsp.algorithm.individual.Chromosome;
 import tsp.algorithm.individual.PhenotypeInterpreter;
 import tsp.algorithm.mutation.RandomizeGeneMutationOperator;
+import tsp.algorithm.tournament.Chooser;
+import tsp.algorithm.tournament.TournamentChooser;
 import tsp.algorithm.util.FitnessCalculator;
 import tsp.instance.AbstractInstance;
 import tsp.instance.reader.InstanceFileReader;
@@ -29,8 +31,8 @@ public class VisualizedDemo {
 		System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
 
 		InstanceFileReader instanceFileReader = new InstanceFileReader();
-		// AbstractInstance instance =
-		// instanceFileReader.read(getPath("input/queen7_7.col"));
+//		 AbstractInstance instance =
+//		 instanceFileReader.read(getPath("input/queen7_7.col"));
 		AbstractInstance instance = instanceFileReader.read(getPath("input/my_very_simple_3.col"));
 
 		PhenotypeInterpreter phenotypeInterpreter = new PhenotypeInterpreter();
@@ -73,11 +75,13 @@ public class VisualizedDemo {
 				}
 			}
 		};
+		
+		Chooser tournamentChooser = new TournamentChooser(fitnessCalculator, 3);
 
 		Algorithm algorithm = new Algorithm.AlgorithmBuilder().numberOfGenerations(500).bestInGenerationListener(null)
 				.phenotypeInterpreter(new PhenotypeInterpreter()).crossoverOperator(new SinglePointCrossoverOperator())
 				.crossoverRate(0.7).mutationOperator(new RandomizeGeneMutationOperator()).mutationRate(0.1)
-				.populationSize(100).tournamentSize(3).bestInGenerationListener(listener).build();
+				.chooser(tournamentChooser).populationSize(100).bestInGenerationListener(listener).build();
 
 		algorithm.execute(instance);
 	}

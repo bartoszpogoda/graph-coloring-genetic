@@ -1,18 +1,24 @@
 package tsp.algorithm;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.javatuples.Pair;
 
 import tsp.algorithm.crossover.CrossoverOperator;
 import tsp.algorithm.individual.Chromosome;
 import tsp.algorithm.individual.PhenotypeInterpreter;
+import tsp.algorithm.inversion.InversionOperator;
 import tsp.algorithm.mutation.MutationOperator;
 import tsp.algorithm.population.Population;
 import tsp.algorithm.thread.AlgorithmTerminator;
+import tsp.algorithm.tournament.Chooser;
 import tsp.algorithm.tournament.TournamentChooser;
 import tsp.algorithm.util.FitnessCalculator;
 import tsp.algorithm.util.RandomGenerator;
 import tsp.instance.AbstractInstance;
+import tsp.instance.Edge;
 
 public class Algorithm {
 
@@ -22,19 +28,22 @@ public class Algorithm {
 	private AlgorithmTerminator algorithmTerminator;
 
 	private FitnessCalculator fitnessCalculator;
-	private TournamentChooser tournamentChooser;
 	private CrossoverOperator crossoverOperator;
 	private MutationOperator mutationOperator;
 	private RandomGenerator randomGenerator;
+	private InversionOperator inversionOperator;
+	private Chooser chooser;
+	
 	private PhenotypeInterpreter phenotypeInterpreter;
 	private BestInGenerationListener bestInGenerationListener;
 
 	// parameters
 	private int populationSize = 100;
-	private int tournamentSize = 2;
 	private double crossoverRate = 0.8;
 	private double mutationRate = 0.01;
 	private int numberOfGenerations = 0;
+	private boolean eliteSelection = false;
+	private double inversionRate = 0;
 
 	// best fittest tracking
 	private Chromosome currentBest = null;
@@ -54,19 +63,16 @@ public class Algorithm {
 		running = true;
 
 		fitnessCalculator = new FitnessCalculator(phenotypeInterpreter, instance);
-		tournamentChooser = new TournamentChooser(fitnessCalculator, tournamentSize);
 
 		Population initialPopulation = Population.generateInitialPopulation(phenotypeInterpreter, populationSize,
 				instance);
 
-		
 		if (algorithmTerminator != null) {
 			algorithmTerminator.start();
 		}
 
 		startEvolution(instance, initialPopulation);
-
-		// TODO in the end fix result by applying possible or new color in bad verticles (greedy way)
+		applyResultFix(instance, currentBest);
 
 		return currentBest;
 	}
@@ -102,10 +108,18 @@ public class Algorithm {
 		}
 
 		Population evolvedPopulation = new Population(populationSize);
-
-		for (int i = 0; i < evolvedPopulation.getSize() - 1; i += 2) {
-			Chromosome firstParent = tournamentChooser.choose(population);
-			Chromosome secondParent = tournamentChooser.choose(population);
+		
+		// Elite selection - incubate best chromosome
+		int incubatedChromosomes = 0;
+		if(eliteSelection) {			
+			evolvedPopulation.saveChromosome(incubatedChromosomes++, theFittest);
+			evolvedPopulation.saveChromosome(incubatedChromosomes++, theFittest);
+		}
+		
+		chooser.resetForNewPopulation();
+		for (int i = incubatedChromosomes; i < evolvedPopulation.getSize() - 1; i += 2) {
+			Chromosome firstParent = chooser.choose(population);
+			Chromosome secondParent = chooser.choose(population);
 
 			if (randomGenerator.nextDouble() < crossoverRate) {
 				Pair<Chromosome, Chromosome> children = crossoverOperator.crossover(firstParent, secondParent);
@@ -117,13 +131,51 @@ public class Algorithm {
 			}
 		}
 
-		for (int i = 0; i < evolvedPopulation.getSize(); i++) {
+		for (int i = incubatedChromosomes; i < evolvedPopulation.getSize(); i++) {
 			if (randomGenerator.nextDouble() < mutationRate) {
 				mutationOperator.mutate(evolvedPopulation.getChromosome(i));
 			}
 		}
+		
+		if(inversionRate > 0) {
+			for (int i = incubatedChromosomes; i < evolvedPopulation.getSize(); i++) {
+				if (randomGenerator.nextDouble() < inversionRate) {
+					inversionOperator.inverse(evolvedPopulation.getChromosome(i));
+				}
+			}
+		}
+		
 
 		return evolvedPopulation;
+	}
+
+	// TODO for 2nd stage make it smarter (apply not new colors but if possible reaply already used)
+	private void applyResultFix(AbstractInstance instance, Chromosome result) {
+		List<Edge> edges = instance.getAllEdges();
+
+		for (Edge edge : edges) {
+			if (phenotypeInterpreter.getColor(result, edge.getFrom()) == phenotypeInterpreter.getColor(result,
+					edge.getTo())) {
+
+				phenotypeInterpreter.setColor(result, edge.getFrom(), findFirstUnusedColor(instance, result));
+			}
+		}
+	}
+	
+	private int findFirstUnusedColor(AbstractInstance instance, Chromosome chromosome) {
+		Set<Integer> usedColors = new HashSet<>();
+
+		for (int i = 0; i < chromosome.getLength(); i++) {
+			int color = phenotypeInterpreter.getColor(chromosome, i);
+
+			usedColors.add(color);
+		}
+		
+		for(int i = 0 ; ; i++) {
+			if(!usedColors.contains(i)) {
+				return i;
+			}
+		}
 	}
 
 	public void terminate() {
@@ -147,8 +199,13 @@ public class Algorithm {
 			return this;
 		}
 
-		public AlgorithmBuilder tournamentSize(int tournamentSize) {
-			builtAlgorithm.tournamentSize = tournamentSize;
+		public AlgorithmBuilder chooser(Chooser chooser) {
+			builtAlgorithm.chooser = chooser;
+			return this;
+		}
+		
+		public AlgorithmBuilder eliteSelection(boolean eliteSelection) {
+			builtAlgorithm.eliteSelection = eliteSelection;
 			return this;
 		}
 
@@ -169,6 +226,18 @@ public class Algorithm {
 
 		public AlgorithmBuilder mutationOperator(MutationOperator mutationOperator) {
 			builtAlgorithm.mutationOperator = mutationOperator;
+			return this;
+		}
+		
+
+		public AlgorithmBuilder inversionOperator(InversionOperator inversionOperator) {
+			builtAlgorithm.inversionOperator = inversionOperator;
+			return this;
+		}
+		
+
+		public AlgorithmBuilder inversionRate(double inversionRate) {
+			builtAlgorithm.inversionRate = inversionRate;
 			return this;
 		}
 
@@ -197,7 +266,6 @@ public class Algorithm {
 			StringBuilder stringBuilder = new StringBuilder();
 
 			stringBuilder.append("Wielkoœæ populacji: " + builtAlgorithm.populationSize + "\n");
-			stringBuilder.append("Wielkosæ turnieju: " + builtAlgorithm.tournamentSize + "\n");
 			stringBuilder.append("Operator mutacji: " + builtAlgorithm.mutationOperator + "\n");
 			stringBuilder.append("Wspó³czynnik mutacji: " + builtAlgorithm.mutationRate + "\n");
 			stringBuilder.append("Operator krzy¿owania: " + builtAlgorithm.crossoverOperator + "\n");

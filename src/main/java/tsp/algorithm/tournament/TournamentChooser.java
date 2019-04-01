@@ -5,7 +5,7 @@ import tsp.algorithm.population.Population;
 import tsp.algorithm.util.FitnessCalculator;
 import tsp.algorithm.util.RandomGenerator;
 
-public class TournamentChooser {
+public class TournamentChooser implements Chooser {
 
 	private FitnessCalculator fitnessCalculator;
 	private RandomGenerator randomGenerator;
@@ -42,6 +42,11 @@ public class TournamentChooser {
 		}
 
 		return bestParticipant;
+	}
+
+	@Override
+	public void resetForNewPopulation() {
+		// do nothing
 	}
 
 }
